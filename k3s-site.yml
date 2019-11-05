@@ -1,0 +1,21 @@
+---
+
+- hosts: k3s_masters k3s_workers
+  gather_facts: yes
+
+  roles:
+  - common
+
+
+- hosts: k3s_masters
+  gather_facts: yes
+
+  roles:
+  - k3s-master
+
+
+- hosts: k3s_workers
+  gather_facts: yes
+
+  roles:
+  - k3s-workers

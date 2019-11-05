@@ -1,0 +1,41 @@
+---
+# tasks file for k3s-master
+
+- name: install k3s on master without agent
+  shell: >
+    curl -sfL https://get.k3s.io | 
+    INSTALL_K3S_EXEC="--disable-agent --write-kubeconfig-mode 644" 
+    sh -
+  args:
+    creates: /usr/local/bin/k3s
+    warn: no
+  register: master_install_result
+  become: yes
+  run_once: yes
+
+- name: results of installation
+  debug: var=master_install_result.stdout_lines
+  when: master_install_result is changed
+
+- name: create credentials directory
+  file:
+    path: credentials
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: yes
+
+- name: fetch k3s.yaml
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: credentials/k3s.yaml
+    flat: yes
+  run_once: yes
+
+- name: update master ip in k3s.yaml
+  replace:
+    path: credentials/k3s.yaml
+    regexp: '127.0.0.1'
+    replace: "{{ hostvars[groups['k3s_masters'][0]].ansible_default_ipv4.address }}"
+  delegate_to: localhost
+  run_once: yes

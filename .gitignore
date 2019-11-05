@@ -1,0 +1,13 @@
+.DS_Store
+*retry
+.vagrant
+~*
+*rsa
+*rsa.pub
+osrc*
+.vaultpass
+work
+oneview_config.json
+*.code-workspace
+hosts.yml
+credentials

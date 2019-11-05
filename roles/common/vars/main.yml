@@ -1,0 +1,15 @@
+---
+# vars file for common
+
+apt_packages:
+- git
+- tree
+- wget
+- tmux
+
+yum_packages:
+- git
+- tree
+- wget
+- tmux
+- redhat-lsb-core

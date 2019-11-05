@@ -1,0 +1,89 @@
+---
+# tasks file for common
+
+- name: add http_proxy to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    regexp: '^http_proxy='
+    line: http_proxy="{{ proxy }}"
+  become: yes
+
+- name: add https_proxy to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    regexp: '^https_proxy='
+    line: https_proxy="{{ proxy }}"
+  become: yes
+
+- name: add no_proxy to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    regexp: '^no_proxy='
+    line: no_proxy="{{ no_proxy }}"
+  become: yes
+
+- name: add proxy to yum.conf
+  ini_file:
+    path: /etc/yum.conf
+    section: main
+    option: proxy
+    no_extra_spaces: yes
+    value: "{{ proxy }}"
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: update apt cache
+  apt:
+    update_cache: yes
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: update yum cache
+  yum:
+    update_cache: yes
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: apt autoclean
+  apt:
+    autoclean: yes
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: apt autoremove
+  apt:
+    autoremove: yes
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: yum autoremove
+  yum:
+    autoremove: yes
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: update all apt packages
+  apt:
+    name: "*"
+    state: latest
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: update all yum packages
+  yum:
+    name: "*"
+    state: latest
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: install apt packages
+  apt:
+    name: "{{ apt_packages }}"
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: install yum packages
+  yum:
+    name: "{{ yum_packages }}"
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"

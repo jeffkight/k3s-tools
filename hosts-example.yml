@@ -1,0 +1,39 @@
+all:
+  hosts:
+    localhost:
+    node-19:
+    node-21:
+    node-22:
+    node-27:
+    node-28:
+    node-29:
+    node-30:
+
+  
+  children:
+
+    k3s:
+      children:
+        k3s_masters:
+        k3s_workers:
+      vars:
+        ansible_user: ubuntu
+        proxy: "http://proxy.kightlabs.net:8080"
+        no_proxy: "localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+
+    k3s_masters:
+      hosts:
+        node-19:
+        node-21:
+        node-22:
+      vars:
+
+    k3s_workers:
+      hosts:
+        node-27:
+        node-28:
+        node-29:
+        node-30:
+      vars:
+            
