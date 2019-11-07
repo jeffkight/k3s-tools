@@ -1,0 +1,9 @@
+---
+
+- hosts: rancher
+  gather_facts: yes
+
+  roles:
+  - common
+  - docker
+  - rancher

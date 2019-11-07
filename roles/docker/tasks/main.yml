@@ -1,0 +1,155 @@
+---
+# tasks file for docker
+
+- name: install apt packages
+  apt:
+    name: "{{ docker_apt_packages }}"
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: install yum packages
+  yum:
+    name: "{{ docker_yum_packages }}"
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: install docker python library
+  pip:
+    name: docker
+  become: yes
+
+- name: create systemd directory for docker proxy
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: create systemd proxy file from template
+  template:
+    src: roles/docker/templates/http-proxy.conf.j2
+    dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+    mode: '0644'
+  become: yes
+
+- name: create docker group
+  group:
+    name: docker
+    state: present
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: create dockerroot group
+  group:
+    name: dockerroot
+    state: present
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: add ansible user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: add ansible user to dockerroot group
+  user:
+    name: "{{ ansible_user }}"
+    groups: dockerroot
+    append: yes
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: load kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ docker_kernel_modules }}"
+  become: yes
+
+- name: set sysctl
+  sysctl:
+    name: 'net.bridge.bridge-nf-call-iptables'
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: yes
+
+- name: disable swap
+  command: swapoff -a
+  become: yes
+
+- name: comment out swap in /etc/fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  become: yes
+
+- name: load json from /etc/docker/daemon.json
+  slurp:
+    src: /etc/docker/daemon.json
+  register: original_json
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: append key/values
+  set_fact:
+    merged_json: "{{ original_json.content|b64decode|from_json | default([]) | combine({ 'group': 'dockerroot' }) }}"
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: write json to /etc/docker/daemon.json
+  copy: 
+    content: "{{ merged_json | to_nice_json }}" 
+    dest: /etc/docker/daemon.json
+    backup: yes
+  become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: reload and restart docker service
+  systemd:
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+    name: docker
+  become: yes
+
+- name: stop and disable ufw
+  systemd:
+    state: stopped
+    enabled: no
+    name: ufw
+  become: yes
+  ignore_errors: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: stop and disable firewalld
+  systemd:
+    state: stopped
+    enabled: no
+    name: firewalld
+  become: yes
+  ignore_errors: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: SSH allow tcp forwardwing
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^AllowTcpForwarding '
+    insertafter: '^#AllowTcpForwarding '
+    line: AllowTcpForwarding yes
+  become: yes
+  register: sshd_config_result
+
+- name: reload and restart sshd service
+  systemd:
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+    name: sshd
+  become: yes
+  when: sshd_config_result is changed
+

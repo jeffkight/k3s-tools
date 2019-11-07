@@ -108,6 +108,31 @@ TASK [k3s-master : update master ip in k3s.yaml] *******************************
 changed: [node-19 -> localhost]
 ```
 
+### rancher-site.yml
+
+Utilizes Ansible roles for docker and rancher to install rancher
+
+#### Usage
+```
+$ ansible-playbook rancher-site.yml
+
+PLAY [rancher] ***********************************************************************************************************************************************************
+
+TASK [Gathering Facts] ***************************************************************************************************************************************************
+ok: [node-3]
+```
+output filtered
+```
+TASK [rancher : start rancher in docker] *********************************************************************************************************************************
+changed: [node-3]
+
+PLAY RECAP ***************************************************************************************************************************************************************
+node-3              : ok=24   changed=20   unreachable=0    failed=0    skipped=12   rescued=0    ignored=0
+```
+
+#### Access Rancher
+To access the Rancher server UI, open a browser and go to the hostname or address where the container was installed. You will be guided through setting up your first cluster.
+
 ## Troubleshooting
 
 ### .vaultpass

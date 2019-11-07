@@ -8,6 +8,7 @@ all:
     node-28:
     node-29:
     node-30:
+    node-3:
 
   
   children:
@@ -16,6 +17,7 @@ all:
       children:
         k3s_masters:
         k3s_workers:
+        rancher:
       vars:
         ansible_user: ubuntu
         proxy: "http://proxy.kightlabs.net:8080"
@@ -36,4 +38,8 @@ all:
         node-29:
         node-30:
       vars:
-            
+
+    rancher:
+      hosts:
+        node-3:
+      vars:
