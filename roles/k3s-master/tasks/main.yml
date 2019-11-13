@@ -9,6 +9,9 @@
   args:
     creates: /usr/local/bin/k3s
     warn: no
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
   register: master_install_result
   become: yes
   run_once: yes

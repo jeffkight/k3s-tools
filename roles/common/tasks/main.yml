@@ -1,11 +1,18 @@
 ---
 # tasks file for common
 
+- name: wipe disks
+  shell: sgdisk --zap-all {{ item }}
+  when: wipe_disks
+  loop: "{{ wipe_disks_list }}"
+  become: yes
+
 - name: add http_proxy to /etc/environment
   lineinfile:
     path: /etc/environment
     regexp: '^http_proxy='
     line: http_proxy="{{ proxy }}"
+  when: env_proxy
   become: yes
 
 - name: add https_proxy to /etc/environment
@@ -13,6 +20,7 @@
     path: /etc/environment
     regexp: '^https_proxy='
     line: https_proxy="{{ proxy }}"
+  when: env_proxy
   become: yes
 
 - name: add no_proxy to /etc/environment
@@ -20,7 +28,16 @@
     path: /etc/environment
     regexp: '^no_proxy='
     line: no_proxy="{{ no_proxy }}"
+  when: env_proxy
   become: yes
+
+- name: create apt proxy
+  template:
+    src: roles/common/templates/proxy.conf.j2
+    dest: /etc/apt/apt.conf.d/proxy.conf
+    mode: '0644'
+  become: yes
+  when: ansible_facts['os_family'] == "Debian"
 
 - name: add proxy to yum.conf
   ini_file:
@@ -86,4 +103,22 @@
   yum:
     name: "{{ yum_packages }}"
   become: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: stop and disable ufw
+  systemd:
+    state: stopped
+    enabled: no
+    name: ufw
+  become: yes
+  ignore_errors: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: stop and disable firewalld
+  systemd:
+    state: stopped
+    enabled: no
+    name: firewalld
+  become: yes
+  ignore_errors: yes
   when: ansible_facts['os_family'] == "RedHat"
