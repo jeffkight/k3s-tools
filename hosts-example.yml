@@ -9,6 +9,11 @@ all:
     node-29:
     node-30:
     node-3:
+      wipe_disks: yes
+      wipe_disks_list:
+        - /dev/sdb
+        - /dev/sdc
+        - /dev/sdd
 
   
   children:
@@ -20,19 +25,23 @@ all:
         rancher:
       vars:
         ansible_user: ubuntu
+        env_proxy: no
         proxy: "http://proxy.kightlabs.net:8080"
         no_proxy: "localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+        wipe_disks: yes
+        wipe_disks_list:
+          - /dev/sdb
 
 
     k3s_masters:
       hosts:
         node-19:
-        node-21:
-        node-22:
       vars:
 
     k3s_workers:
       hosts:
+        node-21:
+        node-22:
         node-27:
         node-28:
         node-29:
