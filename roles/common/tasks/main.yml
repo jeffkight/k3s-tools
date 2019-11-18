@@ -1,7 +1,7 @@
 ---
 # tasks file for common
 
-- name: wipe disks
+- name: wipe disks GPT partition tables
   shell: sgdisk --zap-all {{ item }}
   when: wipe_disks
   loop: "{{ wipe_disks_list }}"

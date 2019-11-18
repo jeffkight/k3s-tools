@@ -1,6 +1,9 @@
 all:
   hosts:
     localhost:
+      # necessary for MacOS using venv
+      ansible_python_interpreter: /Users/jeff/venv/bin/python
+      kubeconfig: credentials/k3s.yaml
     node-19:
     node-21:
     node-22:
@@ -24,6 +27,7 @@ all:
         k3s_workers:
         rancher:
       vars:
+        # use centos or ubuntu as appropriate for ansible_user
         ansible_user: ubuntu
         env_proxy: no
         proxy: "http://proxy.kightlabs.net:8080"
@@ -31,12 +35,16 @@ all:
         wipe_disks: yes
         wipe_disks_list:
           - /dev/sdb
+        kubeconfig: credentials/k3s.yaml
+        k3s_version: "v1.0.0-rc5"
+        k3s_exec: "--disable-agent --write-kubeconfig-mode 644"
 
 
     k3s_masters:
       hosts:
         node-19:
       vars:
+
 
     k3s_workers:
       hosts:
@@ -47,6 +55,7 @@ all:
         node-29:
         node-30:
       vars:
+
 
     rancher:
       hosts:

@@ -16,6 +16,9 @@
 - name: install docker python library
   pip:
     name: docker
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
   become: yes
 
 - name: create systemd directory for docker proxy

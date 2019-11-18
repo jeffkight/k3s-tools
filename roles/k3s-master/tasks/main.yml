@@ -4,7 +4,8 @@
 - name: install k3s on master without agent
   shell: >
     curl -sfL https://get.k3s.io | 
-    INSTALL_K3S_EXEC="--disable-agent --write-kubeconfig-mode 644" 
+    INSTALL_K3S_EXEC="{{ k3s_exec }}" 
+    INSTALL_K3S_VERSION="{{ k3s_version }}" 
     sh -
   args:
     creates: /usr/local/bin/k3s
