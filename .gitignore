@@ -9,5 +9,6 @@ osrc*
 work
 oneview_config.json
 *.code-workspace
-hosts.yml
+hosts
 credentials
+private

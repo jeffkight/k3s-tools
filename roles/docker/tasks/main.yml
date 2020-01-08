@@ -16,10 +16,17 @@
 - name: install docker python library
   pip:
     name: docker
+  become: yes
+  when: not use_proxy
+
+- name: install docker python library
+  pip:
+    name: docker
   environment:
     http_proxy: "{{ proxy }}"
     https_proxy: "{{ proxy }}"
   become: yes
+  when: use_proxy
 
 - name: create systemd directory for docker proxy
   file:
@@ -27,6 +34,7 @@
     state: directory
     mode: '0755'
   become: yes
+  when: use_proxy
 
 - name: create systemd proxy file from template
   template:
@@ -34,6 +42,7 @@
     dest: /etc/systemd/system/docker.service.d/http-proxy.conf
     mode: '0644'
   become: yes
+  when: use_proxy
 
 - name: create docker group
   group:

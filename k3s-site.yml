@@ -1,13 +1,13 @@
 ---
 
-- hosts: k3s_masters k3s_workers
+- hosts: k3s_masters[0] k3s_workers
   gather_facts: yes
 
   roles:
   - common
 
 
-- hosts: k3s_masters
+- hosts: k3s_masters[0]
   gather_facts: yes
 
   roles:
@@ -19,3 +19,23 @@
 
   roles:
   - k3s-workers
+
+# - hosts: localhost
+#   connection: local
+#   gather_facts: yes
+
+#   tasks:
+
+#   - name: set labels on workers
+#     k8s:
+#       kubeconfig: "{{ kubeconfig }}"
+#       state: present
+#       definition:
+#         apiVersion: v1
+#         kind: Node
+#         metadata:
+#           name: "{{ item }}"
+#           labels:
+#             # kubernetes.io/role: node
+#             node-role.kubernetes.io/node: "true"
+#     loop: "{{ groups.k3s_workers }}"

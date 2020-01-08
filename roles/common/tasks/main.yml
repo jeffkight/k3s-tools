@@ -15,11 +15,27 @@
   when: env_proxy
   become: yes
 
+- name: add HTTP_PROXY to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    regexp: '^HTTP_PROXY='
+    line: HTTP_PROXY="{{ proxy }}"
+  when: env_proxy
+  become: yes
+
 - name: add https_proxy to /etc/environment
   lineinfile:
     path: /etc/environment
     regexp: '^https_proxy='
     line: https_proxy="{{ proxy }}"
+  when: env_proxy
+  become: yes
+
+- name: add HTTPS_PROXY to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    regexp: '^HTTPS_PROXY='
+    line: HTTPS_PROXY="{{ proxy }}"
   when: env_proxy
   become: yes
 
@@ -31,13 +47,23 @@
   when: env_proxy
   become: yes
 
+- name: add NO_PROXY to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    regexp: '^NO_PROXY='
+    line: NO_PROXY="{{ no_proxy }}"
+  when: env_proxy
+  become: yes
+
 - name: create apt proxy
   template:
     src: roles/common/templates/proxy.conf.j2
     dest: /etc/apt/apt.conf.d/proxy.conf
     mode: '0644'
   become: yes
-  when: ansible_facts['os_family'] == "Debian"
+  when:
+  - ansible_facts['os_family'] == "Debian"
+  - pkg_proxy
 
 - name: add proxy to yum.conf
   ini_file:
@@ -47,7 +73,9 @@
     no_extra_spaces: yes
     value: "{{ proxy }}"
   become: yes
-  when: ansible_facts['os_family'] == "RedHat"
+  when: 
+  - ansible_facts['os_family'] == "RedHat"
+  - pkg_proxy
 
 - name: update apt cache
   apt:
@@ -122,3 +150,60 @@
   become: yes
   ignore_errors: yes
   when: ansible_facts['os_family'] == "RedHat"
+
+- name: disable swap
+  command: swapoff -a
+  become: yes
+
+- name: comment out swap in /etc/fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  become: yes
+
+- name: install ca chain cert
+  copy:
+    src: "{{ item }}"
+    dest: /usr/local/share/ca-certificates/{{ item|basename }}.crt
+    mode: '0644'
+  become: yes
+  loop: "{{ ca_cert_list }}"
+  when: 
+  - ansible_facts['os_family'] == "Debian"
+  - install_ca
+
+- name: install ca chain cert
+  copy:
+    src: "{{ item }}"
+    dest: /etc/pki/ca-trust/source/anchors/{{ item|basename }}.crt
+    mode: '0644'
+  become: yes
+  loop: "{{ ca_cert_list }}"
+  when: 
+  - ansible_facts['os_family'] == "RedHat"
+  - install_ca
+
+- name: update ca certificates
+  command: update-ca-certificates
+  become: yes
+  register: update_ca_result
+  when: 
+  - ansible_facts['os_family'] == "Debian"
+  - install_ca
+
+- name: update ca result
+  debug: var=update_ca_result.stdout_lines
+  when: update_ca_result is changed
+
+- name: update ca certificates
+  command: update-ca-trust
+  become: yes
+  register: update_ca_result
+  when: 
+  - ansible_facts['os_family'] == "RedHat"
+  - install_ca
+
+- name: update ca result
+  debug: var=update_ca_result.stdout_lines
+  when: update_ca_result is changed

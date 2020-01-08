@@ -3,7 +3,36 @@
 
 # docker run -d --restart=unless-stopped -p 80:80 -p 443:443 rancher/rancher
 
-- name: start rancher in docker
+- name: create certs dir
+  file:
+    path: '{{ certs_dest_dir }}'
+    state: directory
+    mode: '0700'
+  become: yes
+
+- name: copy certs
+  copy:
+    src: '{{ item }}'
+    dest: '{{ certs_dest_dir }}/'
+    mode: '0600'
+  become: yes
+  loop: '{{ certs_list }}'
+
+- name: start rancher in docker with custom certs, no proxy
+  docker_container:
+    name: myrancher
+    image: rancher/rancher
+    ports:
+    - "80:80"
+    - "443:443"
+    restart_policy: unless-stopped
+    volumes: '{{ volumes_list }}'
+  become: yes
+  when:
+  - install_ca
+  - not use_proxy
+
+- name: start rancher in docker, no proxy
   docker_container:
     name: myrancher
     image: rancher/rancher
@@ -12,4 +41,77 @@
     - "443:443"
     restart_policy: unless-stopped
   become: yes
-  
+  when:
+  - not install_ca
+  - not use_proxy
+
+- name: start rancher in docker with custom certs, use proxy
+  docker_container:
+    name: myrancher
+    image: rancher/rancher
+    ports:
+    - "80:80"
+    - "443:443"
+    restart_policy: unless-stopped
+    volumes: '{{ volumes_list }}'
+    env:
+      HTTP_PROXY: "{{ proxy }}"
+      HTTPS_PROXY: "{{ proxy }}"
+      NO_PROXY: "{{ no_proxy }}"
+      http_proxy: "{{ proxy }}"
+      https_proxy: "{{ proxy }}"
+      no_proxy: "{{ no_proxy }}"
+  become: yes
+  when:
+  - install_ca
+  - use_proxy
+
+# docker run -d --restart=unless-stopped \
+# --name myrancher \
+# -p 80:80 -p 443:443 \
+# -e HTTP_PROXY="http://proxy.ftc5.hpelabs.net:8080" \
+# -e HTTPS_PROXY="http://proxy.ftc5.hpelabs.net:8080" \
+# -e NO_PROXY="localhost,127.0.0.1,0.0.0.0,172.20.3.0/24,172.20.12.0/26,172.20.12.64/26,172.20.12.128/26,172.20.12.192/26,172.20.13.0/26,172.20.13.64/26,172.20.13.128/26,172.20.13.192/26,8.41.164.64/26,kightlabs.net,hpelabs.net" \
+# -e http_proxy="http://proxy.ftc5.hpelabs.net:8080" \
+# -e https_proxy="http://proxy.ftc5.hpelabs.net:8080" \
+# -e no_proxy="localhost,127.0.0.1,0.0.0.0,172.20.3.0/24,172.20.12.0/26,172.20.12.64/26,172.20.12.128/26,172.20.12.192/26,172.20.13.0/26,172.20.13.64/26,172.20.13.128/26,172.20.13.192/26,8.41.164.64/26,kightlabs.net,hpelabs.net" \
+# -v /root/certs/chain-rancher.int.kightlabs.net.crt.pem:/etc/rancher/ssl/cert.pem \
+# -v /root/certs/rancher.int.kightlabs.net.key.pem:/etc/rancher/ssl/key.pem \
+# -v /root/certs/kightlabs-root-ca.crt.pem:/etc/rancher/ssl/cacerts.pem \
+# rancher/rancher:latest
+
+# - name: start rancher in docker with custom certs, use proxy
+#   command: >
+#     docker run -d --restart=unless-stopped 
+#     -p 80:80 -p 443:443 
+#     -e HTTP_PROXY="{{ proxy }}" 
+#     -e HTTPS_PROXY="{{ proxy }}" 
+#     -e NO_PROXY="{{ no_proxy }}" 
+#     -v /root/certs/chain-rancher.int.kightlabs.net.crt.pem:/etc/rancher/ssl/cert.pem 
+#     -v /root/certs/rancher.int.kightlabs.net.key.pem:/etc/rancher/ssl/key.pem 
+#     -v /root/certs/kightlabs-root-ca.crt.pem:/etc/rancher/ssl/cacerts.pem
+#     rancher/rancher:latest
+#   become: yes
+#   when:
+#   - install_ca
+#   - use_proxy
+
+- name: start rancher in docker, use proxy
+  docker_container:
+    name: myrancher
+    image: rancher/rancher
+    ports:
+    - "80:80"
+    - "443:443"
+    restart_policy: unless-stopped
+    env:
+      HTTP_PROXY: "{{ proxy }}"
+      HTTPS_PROXY: "{{ proxy }}"
+      NO_PROXY: "{{ no_proxy }}"
+      http_proxy: "{{ proxy }}"
+      https_proxy: "{{ proxy }}"
+      no_proxy: "{{ no_proxy }}"
+  become: yes
+  when:
+  - not install_ca
+  - use_proxy

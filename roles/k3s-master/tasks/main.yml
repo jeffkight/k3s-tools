@@ -1,45 +1,90 @@
 ---
 # tasks file for k3s-master
 
-- name: install k3s on master without agent
+- name: create Downloads directory
+  file:
+    path: Downloads
+    state: directory
+    mode: '0755'
+
+- name: get k3s installer
+  get_url:
+    url: https://get.k3s.io
+    dest: "{{ ansible_user_dir }}/Downloads/k3s-setup.sh"
+    mode: '0644'
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
+    no_proxy: "{{ no_proxy }}"
+  when: use_proxy
+
+- name: get k3s installer
+  get_url:
+    url: https://get.k3s.io
+    dest: "{{ ansible_user_dir }}/Downloads/k3s-setup.sh"
+    mode: '0644'
+  when: not use_proxy
+
+- name: install k3s no proxy
   shell: >
-    curl -sfL https://get.k3s.io | 
-    INSTALL_K3S_EXEC="{{ k3s_exec }}" 
+    cat Downloads/k3s-setup.sh | 
+    INSTALL_K3S_EXEC="{{ k3s_exec }} --node-ip {{ internal_ip }} --node-external-ip {{ external_ip }}" 
     INSTALL_K3S_VERSION="{{ k3s_version }}" 
     sh -
   args:
     creates: /usr/local/bin/k3s
     warn: no
-  environment:
-    http_proxy: "{{ proxy }}"
-    https_proxy: "{{ proxy }}"
+  when: not use_proxy
   register: master_install_result
   become: yes
-  run_once: yes
 
 - name: results of installation
-  debug: var=master_install_result.stdout_lines
+  debug: var=master_install_result
   when: master_install_result is changed
 
-- name: create credentials directory
+- name: install k3s with proxy
+  shell: >
+    cat Downloads/k3s-setup.sh | 
+    INSTALL_K3S_EXEC="{{ k3s_exec }} --node-ip {{ internal_ip }} --node-external-ip {{ external_ip }}" 
+    INSTALL_K3S_VERSION="{{ k3s_version }}" 
+    HTTP_PROXY="{{ proxy }}" 
+    HTTPS_PROXY="{{ proxy }}" 
+    NO_PROXY="{{ no_proxy }}" 
+    sh -
+  args:
+    creates: /usr/local/bin/k3s
+    warn: no
+  when: use_proxy
+  register: master_install_result
+  become: yes
+
+- name: results of installation
+  debug: var=master_install_result
+  when: master_install_result is changed
+
+- name: create credentials directory on localhost
   file:
     path: credentials
     state: directory
     mode: '0755'
   delegate_to: localhost
-  run_once: yes
 
 - name: fetch k3s.yaml
   fetch:
     src: /etc/rancher/k3s/k3s.yaml
-    dest: credentials/k3s.yaml
+    dest: "{{ kubeconfig }}"
     flat: yes
-  run_once: yes
 
 - name: update master ip in k3s.yaml
   replace:
-    path: credentials/k3s.yaml
+    path: "{{ kubeconfig }}"
     regexp: '127.0.0.1'
-    replace: "{{ hostvars[groups['k3s_masters'][0]].ansible_default_ipv4.address }}"
+    replace: "{{ hostvars[groups['k3s_masters'][0]].internal_ip }}"
   delegate_to: localhost
-  run_once: yes
+
+- name: update cluster name k3s.yaml
+  replace:
+    path: "{{ kubeconfig }}"
+    regexp: 'default'
+    replace: "{{ cluster_name }}"
+  delegate_to: localhost
